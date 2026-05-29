@@ -1,0 +1,12 @@
+# Keep the build context small and avoid copying host (wrong-arch) deps/builds.
+node_modules/
+dist/
+build/
+.git/
+.gitignore
+.idea/
+.vscode/
+.env
+.env.*
+npm-debug.log*
+*.log

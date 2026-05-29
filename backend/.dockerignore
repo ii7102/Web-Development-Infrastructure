@@ -1,0 +1,9 @@
+# Keep the build context small and avoid leaking host artifacts into the image.
+target/
+.git/
+.gitignore
+.idea/
+*.iml
+.env
+.env.*
+*.log
