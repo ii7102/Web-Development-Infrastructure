@@ -1,0 +1,30 @@
+# Public TLS edge for production. Caddy obtains and auto-renews a Let's Encrypt
+# certificate for $APP_DOMAIN, terminates HTTPS, and forwards everything to the
+# internal nginx gateway (which does the /, /api/, /auth/ path routing).
+#
+# Requirements on the server:
+#   - $APP_DOMAIN's DNS A/AAAA record points at this server
+#   - ports 80 and 443 are reachable from the internet (80 is used for the ACME
+#     challenge and to redirect http -> https)
+
+{
+	email {$ACME_EMAIL}
+}
+
+{$APP_DOMAIN} {
+	encode zstd gzip
+
+	# Sensible baseline security headers. App-specific policies (CSP,
+	# X-Frame-Options) are intentionally left to the application.
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+
+	# Forward to the internal gateway. Caddy sets X-Forwarded-Proto: https and
+	# preserves the Host header, which Keycloak needs to build correct issuer /
+	# redirect URLs.
+	reverse_proxy gateway:80
+}

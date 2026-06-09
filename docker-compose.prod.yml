@@ -1,0 +1,39 @@
+# ---------------------------------------------------------------------------
+# PRODUCTION overlay. Use together with the base file (this overlay does NOT
+# load docker-compose.override.yml, so the gateway and databases stay internal):
+#
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+#
+# Adds a Caddy edge that terminates TLS with an auto-provisioned Let's Encrypt
+# certificate and proxies to the internal nginx gateway. Set in .env:
+#   APP_DOMAIN=app.example.com
+#   ACME_EMAIL=you@example.com
+#   APP_PUBLIC_BASE_URL=https://app.example.com   (no port)
+#   ...and strong, non-default secrets for every credential.
+# ---------------------------------------------------------------------------
+
+volumes:
+  caddy-data:
+  caddy-config:
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    container_name: caddy
+    restart: unless-stopped
+    depends_on:
+      gateway:
+        condition: service_started
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL}
+    volumes:
+      - ./infra/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks:
+      - app-net
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"

@@ -1,0 +1,3 @@
+# Flyway migrations go here. Name them V<n>__description.sql, e.g. V1__init.sql.
+# Repeatable migrations use R__description.sql. This .gitkeep just preserves the
+# directory; Flyway ignores non-migration files.

@@ -26,7 +26,7 @@
   "oauth2DeviceCodeLifespan": 600,
   "oauth2DevicePollingInterval": 5,
   "enabled": true,
-  "sslRequired": "external",
+  "sslRequired": "${KEYCLOAK_SSL_REQUIRED}",
   "registrationAllowed": false,
   "registrationEmailAsUsername": false,
   "rememberMe": false,
@@ -48,15 +48,6 @@
   "maxSecondaryAuthFailures": 0,
   "roles": {
     "realm": [
-      {
-        "id": "a6fc6504-38b2-4727-9bad-e8e8f3ed337e",
-        "name": "admin",
-        "description": "",
-        "composite": false,
-        "clientRole": false,
-        "containerId": "709d8d62-4889-4fe5-9f55-afeb093c99de",
-        "attributes": {}
-      },
       {
         "id": "3ccaa6f1-c179-46a0-8735-2e370dbe08a0",
         "name": "default-roles-${KEYCLOAK_REALM}",

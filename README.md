@@ -2,7 +2,9 @@
 
 A containerized full-stack starter: **React SPA + Spring Boot API + Keycloak (OIDC) + PostgreSQL**, fronted by a single **nginx gateway**. Everything runs with one `docker compose up`, and every service is reached through one origin so cookies, CORS, OIDC redirect URIs and the JWT issuer all line up.
 
-> **Template, not a finished app.** `frontend/` and `backend/` ship only their Dockerfiles and supporting config — you drop your own application source in (see [Adding your code](#adding-your-code)). The auth, gateway, database and wiring are done for you.
+> **Template, not a finished app.** `frontend/` and `backend/` ship **minimal booting skeletons** — a Spring Boot API exposing `/api/ping` + `/actuator/health`, and a React SPA that renders and reads its runtime config. The stack comes up green out of the box; you build your features on top (see [Adding your code](#adding-your-code)). The auth infrastructure, gateway, database and wiring are done for you — but app-level auth, roles, schema and payments are intentionally left for you to implement.
+>
+> Working with an AI agent on this template? See [`AGENTS.md`](AGENTS.md) for the conventions and the given-vs-task boundary.
 
 ---
 
@@ -97,6 +99,22 @@ docker compose down           # stop & remove containers (keeps DB volumes)
 docker compose down -v        # also delete database volumes (full reset)
 ```
 
+### In GitHub Codespaces
+
+The repo ships a `.devcontainer`, so "Code → Codespaces → Create codespace" gives a
+ready workspace (Docker included, port `8080` forwarded). On creation it runs
+`.devcontainer/setup.sh`, which creates `.env` and — because a Codespace serves the
+app at a forwarded `https://<name>-8080.app.github.dev` URL rather than
+`localhost:8080` — sets `APP_PUBLIC_BASE_URL` to that URL so Keycloak login works.
+Then just:
+
+```bash
+docker compose up -d --build
+```
+
+and open the forwarded port (8080). It also sets `KEYCLOAK_SSL_REQUIRED=none` for
+the Codespace only; production keeps the strict default.
+
 ---
 
 ## Configuration
@@ -105,7 +123,9 @@ All configuration is environment-driven via `.env` (copied from `.env.example`).
 
 | Variable                          | Description                                                        |
 |-----------------------------------|--------------------------------------------------------------------|
-| `APP_PUBLIC_BASE_URL`             | Public origin of the whole app (the gateway). Default `http://localhost:8080`. |
+| `APP_PUBLIC_BASE_URL`             | Public origin of the whole app. Local: `http://localhost:8080`. Production: `https://your-domain.com`. |
+| `APP_DOMAIN`                      | *(production)* Domain Caddy provisions a TLS cert for.             |
+| `ACME_EMAIL`                      | *(production)* Email for Let's Encrypt registration.              |
 | `COMPOSE_PROJECT_NAME`            | *(optional)* Prefix for container/volume names.                    |
 | `APP_DB_USER` / `_PASSWORD` / `_NAME` | Application Postgres credentials.                              |
 | `KC_DB_USER` / `_PASSWORD` / `_NAME`  | Keycloak Postgres credentials.                                |
@@ -140,20 +160,22 @@ The backend runs as an **OAuth2 resource server**: it validates incoming JWTs ag
 
 ## Adding your code
 
-This template provides the infrastructure; add your application source into the existing directories.
+This template provides the infrastructure and a minimal booting skeleton in each app; build your features on top of the existing source.
 
 ### Backend (`backend/`)
 
-The Dockerfile expects a Maven project:
+A minimal Spring Boot (Java 21, Maven) skeleton is provided and already boots:
 
 ```
 backend/
-├── Dockerfile        # provided
-├── pom.xml           # add
-└── src/              # add
+├── Dockerfile        # provided (cached dep layer; runs as non-root)
+├── pom.xml           # provided (web + actuator + jdbc + Flyway)
+└── src/
+    ├── main/java/... # provided: Application + a /api/ping controller
+    └── main/resources/db/migration/   # empty — add Flyway scripts (V1__init.sql)
 ```
 
-It builds with `mvn clean package` and runs the resulting jar (Java 21). Wire your Spring Boot app to these environment variables (already passed by compose):
+It builds with `mvn clean package` and runs the resulting `target/app.jar`. A DataSource and **Flyway** are wired: migrations under `src/main/resources/db/migration` run automatically on startup (none ship with the template). Extend the skeleton and wire your Spring Boot app to these environment variables (already passed by compose):
 
 - `SPRING_DATASOURCE_URL` / `_USERNAME` / `_PASSWORD`
 - `SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI` and `…_JWK_SET_URI`
@@ -163,17 +185,23 @@ It builds with `mvn clean package` and runs the resulting jar (Java 21). Wire yo
 
 ### Frontend (`frontend/`)
 
-The Dockerfile expects a Vite project (outputs to `dist/`):
+A minimal Vite + React + TypeScript skeleton is provided (outputs to `dist/`) and already renders:
 
 ```
 frontend/
 ├── Dockerfile             # provided
 ├── nginx.conf             # provided (SPA routing + cache rules)
 ├── docker-entrypoint.sh   # provided (runtime config injection)
-├── package.json           # add
-├── index.html             # add
-└── src/                   # add
+├── package.json           # provided (React 19 + Vite + Tailwind v4)
+├── vite.config.ts         # provided (Tailwind plugin + "@" -> src alias)
+├── tsconfig.json          # provided
+├── index.html             # provided (loads /config.js)
+└── src/
+    ├── index.css          # Tailwind v4 entry
+    └── App.tsx            # demo page (config + /api/ping)
 ```
+
+Styling is preconfigured with **Tailwind CSS v4**. A design exported from Google Stitch brings its own Tailwind config and can be ported in directly. See [`PROMPTS.md`](PROMPTS.md) for the design → build workflow.
 
 **Runtime config injection:** the container writes `/config.js` from environment variables at startup, so the same image works in any environment. To consume it:
 
@@ -188,19 +216,37 @@ Available keys: `APP_PUBLIC_BASE_URL`, `KEYCLOAK_REALM`, `KEYCLOAK_FRONTEND_CLIE
 
 ```
 .
-├── docker-compose.yml          # the whole stack
+├── docker-compose.yml          # the core stack (internal services)
+├── docker-compose.override.yml # local dev host ports (auto-loaded)
+├── docker-compose.prod.yml     # production: Caddy TLS edge (opt-in via -f)
 ├── .env.example                # configuration template (copy to .env)
-├── backend/                    # Spring Boot API (add source)
+├── .devcontainer/              # GitHub Codespaces setup (auto-configures .env)
+├── AGENTS.md                   # conventions for AI agents building on the template
+├── PROMPTS.md                  # design (Stitch) + build prompts
+├── design/                     # staging area: paste a design export here
+│   ├── README.md
+│   └── stitch-export.html
+
+├── backend/                    # Spring Boot API (booting skeleton)
 │   ├── Dockerfile
+│   ├── pom.xml
+│   ├── src/                    # Application + /api/ping
 │   └── .dockerignore
-├── frontend/                   # React SPA (add source)
+├── frontend/                   # React SPA (booting skeleton)
 │   ├── Dockerfile
 │   ├── nginx.conf              # SPA static-serving config
 │   ├── docker-entrypoint.sh    # runtime env → /config.js
+│   ├── package.json
+│   ├── vite.config.ts
+│   ├── tsconfig.json
+│   ├── index.html
+│   ├── src/                    # App.tsx + main.tsx + env.d.ts
 │   └── .dockerignore
 └── infra/
     ├── nginx/
     │   └── default.conf        # gateway routing (/, /api/, /auth/)
+    ├── caddy/
+    │   └── Caddyfile           # production TLS edge (auto Let's Encrypt)
     └── keycloak/
         ├── Dockerfile          # optimized Keycloak build (relative path /auth)
         ├── docker-entrypoint.sh
@@ -226,6 +272,38 @@ docker compose down -v                 # stop and wipe DB volumes (clean slate)
 > **Gateway upstreams:** nginx resolves service names once at startup. If you recreate a backing container (e.g. `keycloak`) and it gets a new IP, restart the gateway too: `docker compose restart gateway`.
 
 ---
+
+## Deploying to production
+
+The repo ships two compose layers so the same stack runs locally over HTTP and in production over HTTPS, with no architectural changes:
+
+| File | Loaded when | Adds |
+|------|-------------|------|
+| `docker-compose.yml`          | always                         | the core stack (internal only) |
+| `docker-compose.override.yml` | local `docker compose up`      | dev host ports (`8080`, `5432`, `5433`) |
+| `docker-compose.prod.yml`     | only with explicit `-f`        | a **Caddy** TLS edge (ports `80`/`443`) with automatic Let's Encrypt certs |
+
+In production the gateway and databases are **not** published to the host — only Caddy is public.
+
+### Steps on the server
+
+1. Point your domain's DNS **A/AAAA record** at the server, and open ports **80** and **443**.
+2. `cp .env.example .env` and set:
+   - `APP_DOMAIN=your-domain.com`
+   - `ACME_EMAIL=you@example.com`
+   - `APP_PUBLIC_BASE_URL=https://your-domain.com` *(no port)*
+   - strong, non-default values for **every** `change-me` secret (DB passwords, Keycloak DB, `KC_BOOTSTRAP_ADMIN_PASSWORD`, backend client secret).
+3. Deploy:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+```
+
+Caddy obtains and renews the TLS certificate automatically and forwards to the internal gateway; Keycloak issues tokens/redirects on the `https://` origin. First boot waits on the ACME challenge — make sure DNS resolves before starting.
+
+### Still your responsibility
+
+The deployment path is provided, but for a hardened, long-lived service also consider: off-host database backups, container resource limits, monitoring/alerting, a multi-node Keycloak if you need HA, and an app-specific `Content-Security-Policy` (left out because it depends on your app).
 
 ## License
 

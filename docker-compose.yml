@@ -44,8 +44,6 @@ services:
       - app-db-data:/var/lib/postgresql
     networks:
       - app-db-net
-    ports:
-      - "5432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${APP_DB_USER} -d ${APP_DB_NAME}"]
       interval: 5s
@@ -65,8 +63,6 @@ services:
       - kc-db-data:/var/lib/postgresql
     networks:
       - kc-db-net
-    ports:
-      - "5433:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${KC_DB_USER} -d ${KC_DB_NAME}"]
       interval: 5s
@@ -103,6 +99,7 @@ services:
       KC_CACHE: local
 
       KEYCLOAK_REALM: ${KEYCLOAK_REALM}
+      KEYCLOAK_SSL_REQUIRED: ${KEYCLOAK_SSL_REQUIRED:-external}
       KEYCLOAK_BACKEND_CLIENT_ID: ${KEYCLOAK_BACKEND_CLIENT_ID}
       KEYCLOAK_BACKEND_CLIENT_SECRET: ${KEYCLOAK_BACKEND_CLIENT_SECRET}
       KEYCLOAK_FRONTEND_CLIENT_ID: ${KEYCLOAK_FRONTEND_CLIENT_ID}
@@ -203,5 +200,3 @@ services:
       - ./infra/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
     networks:
       - app-net
-    ports:
-      - "8080:80"

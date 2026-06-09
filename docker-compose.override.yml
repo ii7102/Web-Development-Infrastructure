@@ -1,0 +1,22 @@
+# ---------------------------------------------------------------------------
+# LOCAL DEVELOPMENT overrides. Docker Compose loads this automatically when you
+# run `docker compose up` with no -f flags. It publishes convenience host ports
+# (the gateway and both databases) for local work.
+#
+# These ports are deliberately NOT in docker-compose.yml so they are NOT exposed
+# in production: the prod command (`-f docker-compose.yml -f docker-compose.prod.yml`)
+# does not load this file, so the gateway/DBs stay internal and only Caddy is public.
+# ---------------------------------------------------------------------------
+
+services:
+  gateway:
+    ports:
+      - "8080:80"
+
+  app-db:
+    ports:
+      - "5432:5432"
+
+  kc-db:
+    ports:
+      - "5433:5432"
