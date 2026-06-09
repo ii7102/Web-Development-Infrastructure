@@ -180,10 +180,10 @@ docker compose ps             # wait until all services are healthy
 
 App: `http://localhost:8080` · API: `/api/` · Keycloak: `/auth/`
 
-> **In Codespaces** the app is served at a forwarded `https://<name>-8080.app.github.dev`
-> URL, not `localhost:8080`. The `.devcontainer` setup script sets
-> `APP_PUBLIC_BASE_URL` to that URL automatically so auth works — don't hardcode
-> `localhost`.
+> If the app is served at a URL other than `http://localhost:8080` (e.g. a forwarded
+> dev URL), `APP_PUBLIC_BASE_URL` must match it exactly or auth breaks. The
+> `.devcontainer` setup script sets this automatically for forwarded-URL
+> environments; otherwise set it in `.env` yourself. Don't hardcode `localhost`.
 
 **Production** (HTTPS via the Caddy edge; gateway + DBs stay internal). Set
 `APP_DOMAIN`, `ACME_EMAIL`, and `APP_PUBLIC_BASE_URL=https://<domain>` in `.env`,

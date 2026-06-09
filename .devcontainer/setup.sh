@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Prepares .env for the current environment.
+# Prepares .env for the current dev environment.
 #
-# In a GitHub Codespace the app is reached at a forwarded HTTPS URL
-# (https://<name>-8080.app.github.dev), NOT http://localhost:8080. Keycloak's
-# issuer, redirect URIs and CORS all follow APP_PUBLIC_BASE_URL, so this script
-# points it at the forwarded URL — otherwise login would break. Run locally
-# (non-Codespace) it just keeps the defaults.
+# Some environments serve the app at a forwarded/proxied HTTPS URL instead of
+# http://localhost:8080. Keycloak's issuer, redirect URIs and CORS all follow
+# APP_PUBLIC_BASE_URL, so it must match the URL the browser actually uses or login
+# breaks. This script auto-detects that case and points APP_PUBLIC_BASE_URL at it;
+# run on a normal localhost setup it just keeps the defaults.
 set -euo pipefail
 
 # Repo root (this script lives in .devcontainer/).
@@ -25,19 +25,22 @@ set_var() {
   fi
 }
 
+# Auto-detect a forwarded-URL dev environment. (GitHub Codespaces exposes these
+# variables; with other tools that serve a forwarded URL, set APP_PUBLIC_BASE_URL
+# in .env manually instead.)
 if [ -n "${CODESPACE_NAME:-}" ]; then
   URL="https://${CODESPACE_NAME}-8080.${GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN}"
-  echo "Codespace detected — configuring the app for: $URL"
+  echo "Forwarded dev environment detected — configuring the app for: $URL"
 
   # Public origin the browser uses (drives Keycloak issuer / redirects / CORS).
   set_var APP_PUBLIC_BASE_URL "$URL"
 
-  # The Codespaces tunnel terminates TLS upstream, so internally the gateway sees
+  # The forwarding tunnel terminates TLS upstream, so internally the gateway sees
   # plain HTTP. Relax Keycloak's SSL requirement for THIS dev environment only;
   # production keeps the strict "external" default.
   set_var KEYCLOAK_SSL_REQUIRED none
 
   echo "Configured. Start the stack with:  docker compose up -d --build"
 else
-  echo "Not a Codespace — keeping local .env defaults (http://localhost:8080)."
+  echo "Local environment — keeping .env defaults (http://localhost:8080)."
 fi

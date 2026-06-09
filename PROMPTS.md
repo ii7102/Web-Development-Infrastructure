@@ -5,8 +5,8 @@ The design → build workflow on this template:
 1. **Design** with Google Stitch using the prompt below.
 2. **Export** with **"Stitch React App"** and paste it into
    `design/stitch-export.html`.
-3. **Build** in the coding environment (e.g. Codespaces): point the AI at the
-   export and describe your features — it follows `AGENTS.md` for the how.
+3. **Build**: point your AI coding tool at the export and describe your features —
+   it follows `AGENTS.md` for the how.
 
 Replace every `[PLACEHOLDER]` with your own text.
 
@@ -59,19 +59,28 @@ ROLES / ACCESS LEVELS:
 
 ## 2. Build prompt — integrate the design + implement features
 
-The coding AI reads `AGENTS.md`, which already contains the full recipe for turning
-a Stitch export into the app plus all the project conventions. So you don't need a
-long prompt — just point it at the export and describe the features you want:
+The AI reads `AGENTS.md`, which already has the full recipe for turning a Stitch
+export into the app plus the frontend/backend conventions. So the prompt only needs
+to give it the **project context** (idea + roles), point at the **design**, and
+list the **features** — the "how" comes from `AGENTS.md`:
 
 ```text
-Integrate the Stitch design in design/stitch-export.html into this app, then
-implement these features FULL-STACK (frontend UI + backend /api endpoints +
-Postgres tables via Flyway): [LIST YOUR FEATURES — e.g. Keycloak login,
-user/admin roles, the events API, ticket checkout].
+PROJECT IDEA:
+[DESCRIBE YOUR APP — the same description you gave Stitch: what it does, who uses
+it, main features.]
 
-When done, verify it runs with `docker compose up -d --build` and every service is
-healthy (`docker compose ps`), then smoke-test http://localhost:8080/ and your
-/api endpoints. Follow AGENTS.md.
+ROLES / ACCESS LEVELS:
+[The roles your app needs and what each can do, or "a single logged-in user".]
+
+TASK:
+Integrate the Stitch design in design/stitch-export.html, then build the app
+FULL-STACK — frontend UI in frontend/src AND backend /api endpoints + Postgres
+tables via Flyway. Implement: [LIST FEATURES — e.g. login, the role model above,
+the core API for your idea, checkout].
+
+Follow AGENTS.md. When done, verify with `docker compose up -d --build` (every
+service healthy via `docker compose ps`) and smoke-test http://localhost:8080/ and
+your /api endpoints.
 ```
 
 Work in steps if it's large (integrate the UI first, then add features one at a

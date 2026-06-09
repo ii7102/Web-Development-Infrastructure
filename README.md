@@ -99,21 +99,21 @@ docker compose down           # stop & remove containers (keeps DB volumes)
 docker compose down -v        # also delete database volumes (full reset)
 ```
 
-### In GitHub Codespaces
+### Dev container
 
-The repo ships a `.devcontainer`, so "Code → Codespaces → Create codespace" gives a
-ready workspace (Docker included, port `8080` forwarded). On creation it runs
-`.devcontainer/setup.sh`, which creates `.env` and — because a Codespace serves the
-app at a forwarded `https://<name>-8080.app.github.dev` URL rather than
-`localhost:8080` — sets `APP_PUBLIC_BASE_URL` to that URL so Keycloak login works.
+The repo ships a `.devcontainer`, so any tool that supports dev containers (GitHub
+Codespaces, VS Code's Dev Containers, etc.) gives a ready workspace with Docker
+included and port `8080` forwarded. On creation it runs `.devcontainer/setup.sh`,
+which creates `.env` — and if the environment serves the app at a forwarded HTTPS
+URL instead of `localhost:8080`, it points `APP_PUBLIC_BASE_URL` at that URL (and
+relaxes `KEYCLOAK_SSL_REQUIRED` for that dev environment) so Keycloak login works.
 Then just:
 
 ```bash
 docker compose up -d --build
 ```
 
-and open the forwarded port (8080). It also sets `KEYCLOAK_SSL_REQUIRED=none` for
-the Codespace only; production keeps the strict default.
+and open the forwarded port (8080). Production keeps the strict defaults.
 
 ---
 
@@ -220,7 +220,7 @@ Available keys: `APP_PUBLIC_BASE_URL`, `KEYCLOAK_REALM`, `KEYCLOAK_FRONTEND_CLIE
 ├── docker-compose.override.yml # local dev host ports (auto-loaded)
 ├── docker-compose.prod.yml     # production: Caddy TLS edge (opt-in via -f)
 ├── .env.example                # configuration template (copy to .env)
-├── .devcontainer/              # GitHub Codespaces setup (auto-configures .env)
+├── .devcontainer/              # dev container (auto-configures .env per environment)
 ├── AGENTS.md                   # conventions for AI agents building on the template
 ├── PROMPTS.md                  # design (Stitch) + build prompts
 ├── design/                     # staging area: paste a design export here
